@@ -107,7 +107,7 @@ app.get('/problems/tag/:tagIDs', async (req, res) => {
     }
 
     let paginate = syzoj.utils.paginate(await Problem.count(sql), req.query.page, syzoj.config.page.problem);
-    let problems = await Problem.query(sql);
+    let problems = await Problem.query(sql + paginate.toSQL());
 
     await problems.forEachAsync(async problem => {
       problem.allowedEdit = await problem.isAllowedEditBy(res.locals.user);
@@ -256,6 +256,7 @@ app.post('/problem/:id/edit', async (req, res) => {
       }
     }
 
+    if (!req.body.title.trim()) throw new ErrorMessage('题目名不能为空。');
     problem.title = req.body.title;
     problem.description = req.body.description;
     problem.input_format = req.body.input_format;
@@ -344,6 +345,7 @@ app.post('/problem/:id/import', async (req, res) => {
 
     if (!json.success) throw new ErrorMessage('题目加载失败。', null, json.error);
 
+    if (!json.obj.title.trim()) throw new ErrorMessage('题目名不能为空。');
     problem.title = json.obj.title;
     problem.description = json.obj.description;
     problem.input_format = json.obj.input_format;
@@ -487,7 +489,7 @@ app.post('/problem/:id/submit', async (req, res) => {
       problem_id: req.params.id
     });
 
-    let contest_id = parseInt(req.query.contest_id);
+    let contest_id = parseInt(req.query.contest_id), redirectToContest = false;
     if (contest_id) {
       let contest = await Contest.fromID(contest_id);
       if (!contest) throw new ErrorMessage('无此比赛。');
@@ -498,6 +500,8 @@ app.post('/problem/:id/submit', async (req, res) => {
       judge_state.type_info = contest_id;
 
       await judge_state.save();
+
+      if (contest.type === 'noi') redirectToContest = true;
     } else {
       if (!await problem.isAllowedUseBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
       judge_state.type = problem.is_public ? 0 : 2;
@@ -511,7 +515,7 @@ app.post('/problem/:id/submit', async (req, res) => {
 
     await waiting_judge.save();
 
-    if (contest_id) {
+    if (redirectToContest) {
       res.redirect(syzoj.utils.makeUrl(['contest', contest_id]));
     } else {
       res.redirect(syzoj.utils.makeUrl(['submission', judge_state.id]));
