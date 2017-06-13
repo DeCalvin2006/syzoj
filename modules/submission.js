@@ -48,6 +48,12 @@ app.get('/submissions', async (req, res) => {
 
     where.type = { $ne: 1 };
 
+    if (!res.locals.user || !await res.locals.user.hasPrivilege('manage_problem')) {
+      where.problem_id = {
+        $in: syzoj.db.literal('(SELECT `id` FROM `problem` WHERE `is_public` = 1' + (res.locals.user ? (' OR `user_id` = ' + res.locals.user.id) : '') + ')')
+      };
+    }
+
     let paginate = syzoj.utils.paginate(await JudgeState.count(where), req.query.page, syzoj.config.page.judge_state);
     let judge_state = await JudgeState.query(paginate, where, [['submit_time', 'desc']]);
 
@@ -80,7 +86,16 @@ app.get('/submissions/:id/ajax', async (req, res) => {
     judge_state.allowedSeeCode = await judge_state.isAllowedSeeCodeBy(res.locals.user);
     judge_state.allowedSeeData = await judge_state.isAllowedSeeDataBy(res.locals.user);
 
+    let contest;
+    if (judge_state.type === 1) {
+      contest = await Contest.fromID(judge_state.type_info);
+      let problems_id = await contest.getProblems();
+      judge_state.problem_id = problems_id.indexOf(judge_state.problem_id) + 1;
+      judge_state.problem.title = syzoj.utils.removeTitleTag(judge_state.problem.title);
+    }
+
     res.render('submissions_item', {
+      contest: contest,
       judge: judge_state
     });
   } catch (e) {
@@ -105,6 +120,7 @@ app.get('/submission/:id', async (req, res) => {
     judge.code = await syzoj.utils.highlight(judge.code, syzoj.config.languages[judge.language].highlight);
     judge.allowedSeeResult = await judge.isAllowedSeeResultBy(res.locals.user);
     judge.allowedSeeCode = await judge.isAllowedSeeCodeBy(res.locals.user);
+    judge.allowedSeeCase = await judge.isAllowedSeeCaseBy(res.locals.user);
     judge.allowedSeeData = await judge.isAllowedSeeDataBy(res.locals.user);
     judge.allowedRejudge = await judge.problem.isAllowedEditBy(res.locals.user);
 
@@ -140,6 +156,7 @@ app.get('/submission/:id/ajax', async (req, res) => {
     judge.code = await syzoj.utils.highlight(judge.code, syzoj.config.languages[judge.language].highlight);
     judge.allowedSeeResult = await judge.isAllowedSeeResultBy(res.locals.user);
     judge.allowedSeeCode = await judge.isAllowedSeeCodeBy(res.locals.user);
+    judge.allowedSeeCase = await judge.isAllowedSeeCaseBy(res.locals.user);
     judge.allowedSeeData = await judge.isAllowedSeeDataBy(res.locals.user);
     judge.allowedRejudge = await judge.problem.isAllowedEditBy(res.locals.user);
 
