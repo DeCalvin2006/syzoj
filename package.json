@@ -4,7 +4,7 @@
   "description": "An OnlineJudge System for OI",
   "main": "app.js",
   "scripts": {
-    "start": "node --harmony-async-await app.js",
+    "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,8 +23,8 @@
   },
   "homepage": "https://github.com/syzoj/syzoj#readme",
   "dependencies": {
-    "adm-zip": "^0.4.7",
     "ansi-to-html": "^0.4.2",
+    "async-lock": "^0.3.9",
     "body-parser": "^1.15.2",
     "cheerio": "^1.0.0-rc.1",
     "cookie-parser": "^1.4.3",
@@ -40,9 +40,11 @@
     "moment": "^2.15.0",
     "multer": "^1.2.0",
     "mysql": "^2.11.1",
+    "node-7z": "^0.4.0",
     "pygmentize-bundled-cached": "^1.1.0",
     "request": "^2.74.0",
     "request-promise": "^4.1.1",
+    "sendmail": "^1.1.1",
     "sequelize": "^3.24.3",
     "session-file-store": "^1.0.0",
     "sqlite3": "^3.1.4",

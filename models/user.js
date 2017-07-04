@@ -68,7 +68,7 @@ class User extends Model {
       is_admin: false,
       ac_num: 0,
       submit_num: 0,
-    sex: 0,
+      sex: 0,
       is_show: syzoj.config.default.user.show
     }, val)));
   }
@@ -88,30 +88,32 @@ class User extends Model {
   }
 
   async refreshSubmitInfo() {
-    let JudgeState = syzoj.model('judge_state');
-    let all = await JudgeState.model.findAll({
-      attributes: ['problem_id'],
-      where: {
-        user_id: this.id,
-        status: 'Accepted',
-        type: {
-          $ne: 1 // Not a contest submissio
+    await syzoj.utils.lock(['User::refreshSubmitInfo', this.id], async () => {
+      let JudgeState = syzoj.model('judge_state');
+      let all = await JudgeState.model.findAll({
+        attributes: ['problem_id'],
+        where: {
+          user_id: this.id,
+          status: 'Accepted',
+          type: {
+            $ne: 1 // Not a contest submission
+          }
         }
-      }
+      });
+
+      let s = new Set();
+      all.forEach(x => s.add(parseInt(x.get('problem_id'))));
+      this.ac_num = s.size;
+
+      let cnt = await JudgeState.count({
+        user_id: this.id,
+        type: {
+          $ne: 1 // Not a contest submission
+        }
+      });
+
+      this.submit_num = cnt;
     });
-
-    let s = new Set();
-    all.forEach(x => s.add(parseInt(x.get('problem_id'))));
-    this.ac_num = s.size;
-
-    let cnt = await JudgeState.count({
-      user_id: this.id,
-      type: {
-        $ne: 1 // Not a contest submissio
-      }
-    });
-
-    this.submit_num = cnt;
   }
 
   async getACProblems() {
@@ -195,8 +197,6 @@ class User extends Model {
 
     let oldPrivileges = await this.getPrivileges();
 
-    console.log(newPrivileges);
-
     let delPrivileges = oldPrivileges.filter(x => !newPrivileges.includes(x));
     let addPrivileges = newPrivileges.filter(x => !oldPrivileges.includes(x));
 
@@ -225,6 +225,15 @@ class User extends Model {
     let UserPrivilege = syzoj.model('user_privilege');
     let x = await UserPrivilege.findOne({ where: { user_id: this.id, privilege: privilege } });
     return !(!x);
+  }
+
+  async getLastSubmitLanguage() {
+    let JudgeState = syzoj.model('judge_state');
+
+    let a = await JudgeState.query([1, 1], { user_id: this.id }, [['submit_time', 'desc']]);
+    if (a[0]) return a[0].language;
+
+    return null;
   }
 
   getModel() { return model; }

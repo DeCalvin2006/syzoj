@@ -8,7 +8,8 @@
 </style>
 <% include header %>
 <div class="padding">
-  <h1 style="margin-bottom: 30px; "><%= contest.title %></h1>
+  <h1><%= contest.title %></h1>
+  <div style="margin-bottom: 30px;"><%- contest.subtitle %></div>
   <% let unveiled = (contest.allowedEdit || syzoj.utils.getCurrentDate() >= contest.start_time); %>
   <% let start = syzoj.utils.formatDate(contest.start_time), end = syzoj.utils.formatDate(contest.end_time); %>
   <% if (contest.running && start.split(' ')[0] === end.split(' ')[0]) {
@@ -21,7 +22,7 @@
     <div class="bar" style="width: <%= timePercentage %>%;"></div>
   </div>
   <div class="ui grid">
-  <% if (contest.allowedEdit || (unveiled && (!contest.running || contest.type !== 'noi'))) { %>
+  <% if (contest.allowedEdit || (unveiled && (!contest.running || contest.type === 'acm'))) { %>
     <div class="row">
       <div class="column">
         <div class="ui buttons">
@@ -34,14 +35,16 @@
       </div>
     </div>
   <% } %>
+  <% if (contest.information) { %>
     <div class="row">
       <div class="column">
-        <h4 class="ui top attached block header">描述</h4>
+        <h4 class="ui top attached block header">信息与公告</h4>
         <div class="ui bottom attached segment font-content">
           <%- contest.information %>
         </div>
       </div>
     </div>
+  <% } %>
   <% if (unveiled) { %>
     <div class="row">
       <div class="column">
@@ -65,9 +68,7 @@
                 <td class="center aligned" style="white-space: nowrap; ">
                 <% if (problem.judge_id) { %>
                   <a href="<%= syzoj.utils.makeUrl(['submission', problem.judge_id]) %>">
-                  <% if (problem.status === true) { %>
-                  <i class="black checkmark icon"></i>
-                  <% } else if (typeof problem.status === 'string') { %>
+                  <% if (typeof problem.status === 'string') { %>
                     <span class="status <%= problem.status.toLowerCase().split(' ').join('_') %>">
                       <i class="<%= icon[getStatusMeta(problem.status)] || 'remove' %> icon"></i>
                       <%= problem.status %>

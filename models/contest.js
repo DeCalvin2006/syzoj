@@ -30,6 +30,7 @@ let ContestPlayer = syzoj.model('contest_player');
 let model = db.define('contest', {
   id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
   title: { type: Sequelize.STRING(80) },
+  subtitle: { type: Sequelize.TEXT },
   start_time: { type: Sequelize.INTEGER },
   end_time: { type: Sequelize.INTEGER },
 
@@ -52,7 +53,9 @@ let model = db.define('contest', {
       model: 'contest_ranklist',
       key: 'id'
     }
-  }
+  },
+
+  is_public: { type: Sequelize.BOOLEAN }
 }, {
   timestamps: false,
   tableName: 'contest',
@@ -71,13 +74,15 @@ class Contest extends Model {
   static async create(val) {
     return Contest.fromRecord(Contest.model.build(Object.assign({
       title: '',
+      subtitle: '',
       problems: '',
       information: '',
       type: 'noi',
       start_time: 0,
       end_time: 0,
       holder: 0,
-      ranklist_id: 0
+      ranklist_id: 0,
+      is_public: false
     }, val)));
   }
 
@@ -91,7 +96,7 @@ class Contest extends Model {
   }
 
   async isAllowedSeeResultBy(user) {
-    if (this.type === 'acm' || this.type === 'ioi') return true;
+    if (this.type === 'acm') return true;
     return (user && (user.is_admin || this.holder_id === user.id)) || !(await this.isRunning());
   }
 
@@ -118,17 +123,20 @@ class Contest extends Model {
     let problems = await this.getProblems();
     if (!problems.includes(judge_state.problem_id)) throw new ErrorMessage('当前比赛中无此题目。');
 
-    let player = await ContestPlayer.findInContest({
-      contest_id: this.id,
-      user_id: judge_state.user_id
-    });
-
-    if (!player) {
-      player = await ContestPlayer.create({
+    let player;
+    await syzoj.utils.lock(['Contest::newSubmission', 'create_player', judge_state.user_id], async () => {
+      player = await ContestPlayer.findInContest({
         contest_id: this.id,
         user_id: judge_state.user_id
       });
-    }
+
+      if (!player) {
+        player = await ContestPlayer.create({
+          contest_id: this.id,
+          user_id: judge_state.user_id
+        });
+      }
+    });
 
     await player.updateScore(judge_state);
     await player.save();

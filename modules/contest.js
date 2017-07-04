@@ -28,10 +28,14 @@ let User = syzoj.model('user');
 
 app.get('/contests', async (req, res) => {
   try {
-    let paginate = syzoj.utils.paginate(await Contest.count(), req.query.page, syzoj.config.page.contest);
-    let contests = await Contest.query(paginate, null, [['start_time', 'desc']]);
+    let where;
+    if (res.locals.user && await res.locals.user.is_admin) where = {}
+    else where = { is_public: true };
 
-    await contests.forEachAsync(async x => x.information = await syzoj.utils.markdown(x.information));
+    let paginate = syzoj.utils.paginate(await Contest.count(where), req.query.page, syzoj.config.page.contest);
+    let contests = await Contest.query(paginate, where, [['start_time', 'desc']]);
+
+    await contests.forEachAsync(async x => x.subtitle = await syzoj.utils.markdown(x.subtitle));
 
     res.render('contests', {
       contests: contests,
@@ -85,17 +89,21 @@ app.post('/contest/:id/edit', async (req, res) => {
       let ranklist = await ContestRanklist.create();
       await ranklist.save();
       contest.ranklist_id = ranklist.id;
+
+      // Only new contest can be set type
+      if (!['noi', 'ioi', 'acm'].includes(req.body.type)) throw new ErrorMessage('无效的赛制。');
+      contest.type = req.body.type;
     }
 
     if (!req.body.title.trim()) throw new ErrorMessage('比赛名不能为空。');
     contest.title = req.body.title;
+    contest.subtitle = req.body.subtitle;
     if (!Array.isArray(req.body.problems)) req.body.problems = [req.body.problems];
     contest.problems = req.body.problems.join('|');
-    if (!['noi', 'ioi', 'acm'].includes(req.body.type)) throw new ErrorMessage('无效的赛制。');
-    contest.type = req.body.type;
     contest.information = req.body.information;
     contest.start_time = syzoj.utils.parseDate(req.body.start_time);
     contest.end_time = syzoj.utils.parseDate(req.body.end_time);
+    contest.is_public = req.body.is_public === 'on';
 
     await contest.save();
 
@@ -117,6 +125,8 @@ app.get('/contest/:id', async (req, res) => {
 
     contest.allowedEdit = await contest.isAllowedEditBy(res.locals.user);
     contest.running = await contest.isRunning();
+    contest.ended = await contest.isEnded();
+    contest.subtitle = await syzoj.utils.markdown(contest.subtitle);
     contest.information = await syzoj.utils.markdown(contest.information);
 
     let problems_id = await contest.getProblems();
@@ -136,17 +146,12 @@ app.get('/contest/:id', async (req, res) => {
       for (let problem of problems) {
         if (contest.type === 'noi') {
           if (player.score_details[problem.problem.id]) {
-            if (await contest.isRunning()) {
-              problem.status = true;
-            } else {
-              let judge_state = await JudgeState.fromID(player.score_details[problem.problem.id].judge_id);
-              problem.status = judge_state.status;
+            let judge_state = await JudgeState.fromID(player.score_details[problem.problem.id].judge_id);
+            problem.status = judge_state.status;
+            if (!contest.ended && !await problem.problem.isAllowedEditBy(res.locals.user) && !['Compile Error', 'Waiting', 'Compiling'].includes(problem.status)) {
+              problem.status = 'Compiled';
             }
             problem.judge_id = player.score_details[problem.problem.id].judge_id;
-          } else {
-            if (contest.isRunning()) {
-              problem.status = false;
-            }
           }
         } else if (contest.type === 'ioi') {
           if (player.score_details[problem.problem.id]) {
@@ -213,8 +218,8 @@ app.get('/contest/:id/ranklist', async (req, res) => {
   try {
     let contest_id = parseInt(req.params.id);
     let contest = await Contest.fromID(contest_id);
-    if (!contest) throw new ErrorMessage('无此比赛。');
 
+    if (!contest) throw new ErrorMessage('无此比赛。');
     if (!await contest.isAllowedSeeResultBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
 
     await contest.loadRelationships();
@@ -258,6 +263,7 @@ app.get('/contest/:id/submissions', async (req, res) => {
     let contest = await Contest.fromID(contest_id);
 
     if (!contest) throw new ErrorMessage('无此比赛。');
+    if (!await contest.isAllowedSeeResultBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
 
     contest.ended = await contest.isEnded();
 
@@ -270,7 +276,7 @@ app.get('/contest/:id/submissions', async (req, res) => {
     where.type = 1;
     where.type_info = contest_id;
 
-    if (contest.ended || contest.type !== 'noi' || (res.locals.user && res.locals.user.is_admin)) {
+    if (contest.ended || (res.locals.user && res.locals.user.is_admin)) {
       if (!((!res.locals.user || !res.locals.user.is_admin) && !contest.ended && contest.type === 'acm')) {
         let minScore = parseInt(req.query.min_score);
         if (isNaN(minScore)) minScore = 0;
@@ -286,18 +292,23 @@ app.get('/contest/:id/submissions', async (req, res) => {
       }
 
       if (req.query.language) where.language = req.query.language;
-      if (req.query.status) where.status = req.query.status;
+      if (req.query.status) where.status = { $like: req.query.status + '%' };
     }
 
     let paginate = syzoj.utils.paginate(await JudgeState.count(where), req.query.page, syzoj.config.page.judge_state);
     let judge_state = await JudgeState.query(paginate, where, [['submit_time', 'desc']]);
 
-    await judge_state.forEachAsync(async obj => obj.hidden = !(await obj.isAllowedSeeResultBy(res.locals.user)));
     await judge_state.forEachAsync(async obj => obj.allowedSeeCode = await obj.isAllowedSeeCodeBy(res.locals.user));
     await judge_state.forEachAsync(async obj => {
       await obj.loadRelationships();
       obj.problem_id = problems_id.indexOf(obj.problem_id) + 1;
       obj.problem.title = syzoj.utils.removeTitleTag(obj.problem.title);
+
+      if (contest.type === 'noi' && !contest.ended && !await obj.problem.isAllowedEditBy(res.locals.user)) {
+        if (!['Compile Error', 'Waiting', 'Compiling'].includes(obj.status)) {
+          obj.status = 'Compiled';
+        }
+      }
     });
 
     res.render('contest_submissions', {
@@ -330,15 +341,20 @@ app.get('/contest/:id/:pid', async (req, res) => {
     let problem_id = problems_id[pid - 1];
     let problem = await Problem.fromID(problem_id);
 
+    problem.specialJudge = await problem.hasSpecialJudge();
+
     await syzoj.utils.markdown(problem, [ 'description', 'input_format', 'output_format', 'example', 'limit_and_hint' ]);
 
     let state = await problem.getJudgeState(res.locals.user, false);
+    let testcases = await syzoj.utils.parseTestdata(problem.getTestdataPath(), problem.type === 'submit-answer');
 
     res.render('problem', {
       pid: pid,
       contest: contest,
       problem: problem,
-      state: state
+      state: state,
+      lastLanguage: res.locals.user ? await res.locals.user.getLastSubmitLanguage() : null,
+      testcases: testcases
     });
   } catch (e) {
     syzoj.log(e);

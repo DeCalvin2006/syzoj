@@ -42,8 +42,11 @@ app.get('/submissions', async (req, res) => {
       }
     };
 
-    if (req.query.language) where.language = req.query.language;
-    if (req.query.status) where.status = req.query.status;
+    if (req.query.language) {
+      if (req.query.language === 'submit-answer') where.language = '';
+      else where.language = req.query.language;
+    }
+    if (req.query.status) where.status = { $like: req.query.status + '%' };
 
     where.type = { $ne: 1 };
 
@@ -68,7 +71,6 @@ app.get('/submissions', async (req, res) => {
     let judge_state = await JudgeState.query(paginate, where, [['submit_time', 'desc']]);
 
     await judge_state.forEachAsync(async obj => obj.loadRelationships());
-    await judge_state.forEachAsync(async obj => obj.hidden = !(await obj.isAllowedSeeResultBy(res.locals.user)));
     await judge_state.forEachAsync(async obj => obj.allowedSeeCode = await obj.isAllowedSeeCodeBy(res.locals.user));
     await judge_state.forEachAsync(async obj => obj.allowedSeeData = await obj.isAllowedSeeDataBy(res.locals.user));
 
@@ -92,16 +94,23 @@ app.get('/submissions/:id/ajax', async (req, res) => {
 
     await judge_state.loadRelationships();
 
-    judge_state.hidden = !(await judge_state.isAllowedSeeResultBy(res.locals.user));
     judge_state.allowedSeeCode = await judge_state.isAllowedSeeCodeBy(res.locals.user);
     judge_state.allowedSeeData = await judge_state.isAllowedSeeDataBy(res.locals.user);
 
     let contest;
     if (judge_state.type === 1) {
       contest = await Contest.fromID(judge_state.type_info);
+      contest.ended = await contest.isEnded();
+
       let problems_id = await contest.getProblems();
       judge_state.problem_id = problems_id.indexOf(judge_state.problem_id) + 1;
       judge_state.problem.title = syzoj.utils.removeTitleTag(judge_state.problem.title);
+
+      if (contest.type === 'noi' && !contest.ended && !await judge_state.problem.isAllowedEditBy(res.locals.user)) {
+        if (!['Compile Error', 'Waiting', 'Compiling'].includes(judge_state.status)) {
+          judge_state.status = 'Compiled';
+        }
+      }
     }
 
     res.render('submissions_item', {
@@ -120,15 +129,20 @@ app.get('/submission/:id', async (req, res) => {
   try {
     let id = parseInt(req.params.id);
     let judge = await JudgeState.fromID(id);
+    if (!judge || !await judge.isAllowedVisitBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
 
     let contest;
-    if (judge.type === 1) contest = await Contest.fromID(judge.type_info);
+    if (judge.type === 1) {
+      contest = await Contest.fromID(judge.type_info);
+      contest.ended = await contest.isEnded();
+    }
 
     await judge.loadRelationships();
 
-    judge.codeLength = judge.code.length;
-    judge.code = await syzoj.utils.highlight(judge.code, syzoj.config.languages[judge.language].highlight);
-    judge.allowedSeeResult = await judge.isAllowedSeeResultBy(res.locals.user);
+    if (judge.problem.type !== 'submit-answer') {
+      judge.codeLength = judge.code.length;
+      judge.code = await syzoj.utils.highlight(judge.code, syzoj.config.languages[judge.language].highlight);
+    }
     judge.allowedSeeCode = await judge.isAllowedSeeCodeBy(res.locals.user);
     judge.allowedSeeCase = await judge.isAllowedSeeCaseBy(res.locals.user);
     judge.allowedSeeData = await judge.isAllowedSeeDataBy(res.locals.user);
@@ -138,6 +152,12 @@ app.get('/submission/:id', async (req, res) => {
       let problems_id = await contest.getProblems();
       judge.problem_id = problems_id.indexOf(judge.problem_id) + 1;
       judge.problem.title = syzoj.utils.removeTitleTag(judge.problem.title);
+
+      if (contest.type === 'noi' && !contest.ended && !await judge.problem.isAllowedEditBy(res.locals.user)) {
+        if (!['Compile Error', 'Waiting', 'Compiling'].includes(judge.status)) {
+          judge.status = 'Compiled';
+        }
+      }
     }
 
     res.render('submission', {
@@ -156,15 +176,20 @@ app.get('/submission/:id/ajax', async (req, res) => {
   try {
     let id = parseInt(req.params.id);
     let judge = await JudgeState.fromID(id);
+    if (!judge || !await judge.isAllowedVisitBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
 
     let contest;
-    if (judge.type === 1) contest = await Contest.fromID(judge.type_info);
+    if (judge.type === 1) {
+      contest = await Contest.fromID(judge.type_info);
+      contest.ended = await contest.isEnded();
+    }
 
     await judge.loadRelationships();
 
-    judge.codeLength = judge.code.length;
-    judge.code = await syzoj.utils.highlight(judge.code, syzoj.config.languages[judge.language].highlight);
-    judge.allowedSeeResult = await judge.isAllowedSeeResultBy(res.locals.user);
+    if (judge.problem.type !== 'submit-answer') {
+      judge.codeLength = judge.code.length;
+      judge.code = await syzoj.utils.highlight(judge.code, syzoj.config.languages[judge.language].highlight);
+    }
     judge.allowedSeeCode = await judge.isAllowedSeeCodeBy(res.locals.user);
     judge.allowedSeeCase = await judge.isAllowedSeeCaseBy(res.locals.user);
     judge.allowedSeeData = await judge.isAllowedSeeDataBy(res.locals.user);
@@ -174,6 +199,12 @@ app.get('/submission/:id/ajax', async (req, res) => {
       let problems_id = await contest.getProblems();
       judge.problem_id = problems_id.indexOf(judge.problem_id) + 1;
       judge.problem.title = syzoj.utils.removeTitleTag(judge.problem.title);
+
+      if (contest.type === 'noi' && !contest.ended && !await judge.problem.isAllowedEditBy(res.locals.user)) {
+        if (!['Compile Error', 'Waiting', 'Compiling'].includes(judge.status)) {
+          judge.status = 'Compiled';
+        }
+      }
     }
 
     res.render('submission_content', {

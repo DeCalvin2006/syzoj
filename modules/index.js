@@ -29,40 +29,28 @@ app.get('/', async (req, res) => {
     let ranklist = await User.query([1, 10], { is_show: true }, [['ac_num', 'desc']]);
     await ranklist.forEachAsync(async x => x.renderInformation());
 
-    let notices = await syzoj.config.notices.mapAsync(async notice => {
-      if (notice.type === 'link') return notice;
-      else if (notice.type === 'article') {
-        let article = await Article.fromID(notice.id);
-        if (!article) throw new ErrorMessage(`无此帖子：${notice.id}`);
-        return {
-          title: article.title,
-          url: syzoj.utils.makeUrl(['article', article.id]),
-          date: syzoj.utils.formatDate(article.public_time, 'L')
-        };
-      }
-    });
+    let notices = (await Article.query(null, { is_notice: true }, [['public_time', 'desc']])).map(article => ({
+      title: article.title,
+      url: syzoj.utils.makeUrl(['article', article.id]),
+      date: syzoj.utils.formatDate(article.public_time, 'L')
+    }));
 
     let fortune = null;
     if (res.locals.user) {
       fortune = Divine(res.locals.user.username, res.locals.user.sex);
     }
 
-    let contests = await Contest.query([1, 5], null, [['start_time', 'desc']]);
-
-    let hitokoto;
-    try {
-      hitokoto = await syzoj.utils.hitokoto();
-    } catch (e) {
-      syzoj.log(e);
-      hitokoto = null;
-    }
+    let where;
+    if (res.locals.user && await res.locals.user.is_admin) where = {}
+    else where = { is_public: true };
+    let contests = await Contest.query([1, 5], where, [['start_time', 'desc']]);
 
     res.render('index', {
       ranklist: ranklist,
       notices: notices,
       fortune: fortune,
       contests: contests,
-      hitokoto: hitokoto
+      links: syzoj.config.links
     });
   } catch (e) {
     syzoj.log(e);

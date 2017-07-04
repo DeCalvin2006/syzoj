@@ -7,15 +7,27 @@
       <button class="ui mini button" type="submit">查找用户</button>
     </div>
   </form>
-	    <table class="ui very basic center aligned table">
+	    <table class="ui very basic center aligned table" style="table-layout: fixed; ">
 	        <thead>
 	        <tr>
-	            <th>#</th>
-	            <th>用户昵称</th>
+	            <th style="width: 80px; ">#</th>
+	            <th style="width: 170px; ">用户名</th>
 	            <th>个性签名</th>
-	            <th>通过数量</th>
+	            <th style="width: 100px; ">通过数量</th>
 	        </tr>
 	        </thead>
+          <script>
+          var lineHeight = 0;
+          (function () {
+            var div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.left = -10000;
+            div.style.visibility = 'hidden';
+            div.innerText = '测试，Test.';
+            document.body.appendChild(div);
+            lineHeight = div.clientHeight;
+          })();
+          </script>
 	        <tbody>
 	        <%
             let i = (paginate.currPage - 1) * paginate.perPage;
@@ -30,9 +42,10 @@
               (function () {
                 var html = <%- JSON.stringify(user.information) %>;
                 var elem = document.createElement('div');
-                elem.style = 'max-height: 50px; overflow: hidden; width: 100%; max-width: 840px; ';
+                elem.style = 'overflow: hidden; width: 100%; ';
+                elem.style.maxHeight = lineHeight + 'px';
                 elem.innerHTML = html;
-                var imgs = Array.from(elem.getElementsByTagName('img'));
+                var imgs = Array.prototype.slice.call(elem.getElementsByTagName('img'));
                 for (var i in imgs) imgs[i].parentNode.removeChild(imgs[i]);
                 var script = document.getElementById('user-infomation-script-<%= i %>');
                 script.parentNode.replaceChild(elem, script);

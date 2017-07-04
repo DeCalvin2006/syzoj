@@ -24,14 +24,26 @@
       </div>
       <h4 class="ui top attached block header">排名</h4>
       <div class="ui bottom attached segment">
-        <table class="ui very basic center aligned table">
+        <table class="ui very basic center aligned table" style="table-layout: fixed; ">
           <thead>
             <tr>
-              <th>#</th>
-              <th>昵称</th>
-              <th>个性签名</th>
+	            <th style="width: 50px; ">#</th>
+	            <th style="width: 170px; ">用户名</th>
+	            <th>个性签名</th>
             </tr>
           </thead>
+          <script>
+          var lineHeight = 0;
+          (function () {
+            var div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.left = -10000;
+            div.style.visibility = 'hidden';
+            div.innerText = '测试，Test.';
+            document.body.appendChild(div);
+            lineHeight = div.clientHeight;
+          })();
+          </script>
           <tbody>
             <%
             let i = 0;
@@ -46,9 +58,10 @@
                       (function () {
                         var html = <%- JSON.stringify(user.information) %>;
                         var elem = document.createElement('div');
-                        elem.style = 'max-height: 50px; overflow: hidden; width: 100%; max-width: 480px; ';
+                        elem.style = 'overflow: hidden; width: 100%; ';
+                        elem.style.maxHeight = lineHeight + 'px';
                         elem.innerHTML = html;
-                        var imgs = Array.from(elem.getElementsByTagName('img'));
+                        var imgs = Array.prototype.slice.call(elem.getElementsByTagName('img'));
                         for (var i in imgs) imgs[i].parentNode.removeChild(imgs[i]);
                         var script = document.getElementById('user-infomation-script-<%= i %>');
                         script.parentNode.replaceChild(elem, script);
@@ -63,13 +76,22 @@
       </div>
     </div>
     <div class="right floated five wide column">
-        <% if (hitokoto) { %>
         <h4 class="ui top attached block header">一言（ヒトコト）</h4>
         <div class="ui bottom attached center aligned segment">
-          <div style="font-size: 1em; line-height: 1.5em; "><%= hitokoto.hitokoto %></div>
-          <% if (hitokoto.source) { %><div style="text-align: right; margin-top: 15px; font-size: 0.9em; color: #666; ">——<%= hitokoto.source %></div><% } %>
+          <div class="ui active centered inline loader" id="hitokoto-loader"></div>
+          <script>
+          $.get('https://sslapi.hitokoto.cn/?c=a', function (data) {
+            data = JSON.parse(data);
+            $('#hitokoto-loader').removeClass('active');
+            $('#hitokoto-content').css('display', '').text(data.hitokoto);
+            if (data.from) {
+              $('#hitokoto-from').css('display', '').text('——' + data.from);
+            }
+          });
+          </script>
+          <div style="font-size: 1em; line-height: 1.5em; display: none; " id="hitokoto-content"></div>
+          <div style="text-align: right; margin-top: 15px; font-size: 0.9em; color: #666; display: none; " id="hitokoto-from"></div>
         </div>
-        <% } %>
         <%
         if (fortune) {
             let color;
@@ -169,14 +191,16 @@
         </table>
         <% } %>
       </div>
-      <h4 class="ui top attached block header font-content">信息栏</h4>
-      <div class="ui bottom attached <% if (!syzoj.config.announcement) { %>center aligned <% } %>segment">
-        <% if (!syzoj.config.announcement) { %>
-        无任何信息
-        <% } else { %>
-        <p><%- syzoj.config.announcement %></p>
-        <% } %>
+      <% if (typeof links !== 'undefined' && links) { %>
+      <h4 class="ui top attached block header font-content">友情链接</h4>
+      <div class="ui bottom attached segment">
+        <ul style="margin: 0; padding-left: 20px; ">
+          <% for (let link of links) { %>
+            <li><a href="<%= link.url %>"><%= link.title %></a></li>
+          <% } %>
+        </ul>
       </div>
+      <% } %>
     </div>
   </div>
 </div>

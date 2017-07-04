@@ -13,7 +13,7 @@
       </div>
       <div class="ui bottom attached tab segment active" data-tab="edit">
         <div class="field">
-          <% if (problem.new || problem.allowedManage) { %>
+          <% if (problem.allowedManage) { %>
             <label for="id">
               <% if (problem.new) { %>
                 题目编号
@@ -30,9 +30,9 @@
           <label style="margin-top: 15px; " for="description">题目描述</label>
           <textarea class="font-content" rows="15" id="description" name="description"><%= problem.description %></textarea>
           <label style="margin-top: 15px; " for="input_format">输入格式</label>
-          <textarea class="font-content" rows="3" id="input" name="input_format"><%= problem.input_format %></textarea>
+          <textarea class="font-content" rows="10" id="input" name="input_format"><%= problem.input_format %></textarea>
           <label style="margin-top: 15px; " for="output_format">输出格式</label>
-          <textarea class="font-content" rows="3" id="output" name="output_format"><%= problem.output_format %></textarea>
+          <textarea class="font-content" rows="10" id="output" name="output_format"><%= problem.output_format %></textarea>
           <label style="margin-top: 15px; ">样例</label>
           <textarea class="font-content" rows="15" id="example" name="example"><%= problem.example %></textarea>
           <label style="margin-top: 15px; ">数据范围与提示</label>
@@ -43,6 +43,11 @@
               <option value="<%= tag.id %>" selected><%= tag.name %></option>
             <% } %>
           </select>
+          <div class="ui <% if (problem.is_anonymous) { %>checked <% } %>checkbox" style="margin-top: 15px; ">
+            <input <% if (problem.is_anonymous) { %>checked=""<% } %> name="is_anonymous" type="checkbox">
+            <label><strong>匿名上传</strong></label>
+            <p style="margin-top: 5px; ">选择后，上传者的用户名将不在题目页面中显示。</p>
+          </div>
         </div>
       </div>
       <div class="ui bottom attached tab segment" data-tab="preview" id="preview">

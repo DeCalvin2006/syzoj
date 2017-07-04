@@ -314,11 +314,8 @@
 }
 
 .padding {
-    padding-left: 1.5em;
-    padding-right: 1.5em;
-    width: 1127px;
-    margin-left: auto;
-    margin-right: auto;
+    padding-left: 1em;
+    padding-right: 1em;
 }
 
 .ui.segment:first-child {
@@ -352,6 +349,10 @@ table.center.aligned ul, table.center.aligned ol {
 	text-align: left;
 }
 
+body > .ui.page.dimmer {
+  position: fixed !important;
+}
+
 /* status color */
 
 /*
@@ -360,6 +361,9 @@ table.center.aligned ul, table.center.aligned ol {
 }
 */
 
+:not(.status_detail).status.compiled,
+.title:hover .status_detail.status.compiled,
+.title.active .status_detail.status.compiled,
 :not(.status_detail).status.accepted,
 .title:hover .status_detail.status.accepted,
 .title.active .status_detail.status.accepted {
@@ -416,6 +420,12 @@ table.center.aligned ul, table.center.aligned ol {
 .title:hover .status_detail.status.judgement_failed,
 .title.active .status_detail.status.judgement_failed {
   color: #78909C;
+}
+
+:not(.status_detail).status.skipped,
+.title:hover .status_detail.status.skipped,
+.title.active .status_detail.status.skipped {
+  color: #FF5722;
 }
 
 :not(.status_detail).status.compiling {
