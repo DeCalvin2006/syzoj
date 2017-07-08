@@ -108,7 +108,7 @@ app.get('/submissions/:id/ajax', async (req, res) => {
 
       if (contest.type === 'noi' && !contest.ended && !await judge_state.problem.isAllowedEditBy(res.locals.user)) {
         if (!['Compile Error', 'Waiting', 'Compiling'].includes(judge_state.status)) {
-          judge_state.status = 'Compiled';
+          judge_state.status = 'Submitted';
         }
       }
     }
@@ -147,7 +147,9 @@ app.get('/submission/:id', async (req, res) => {
     judge.allowedSeeCase = await judge.isAllowedSeeCaseBy(res.locals.user);
     judge.allowedSeeData = await judge.isAllowedSeeDataBy(res.locals.user);
     judge.allowedRejudge = await judge.problem.isAllowedEditBy(res.locals.user);
+    judge.allowedManage = await judge.problem.isAllowedManageBy(res.locals.user);
 
+    let hideScore = false;
     if (contest) {
       let problems_id = await contest.getProblems();
       judge.problem_id = problems_id.indexOf(judge.problem_id) + 1;
@@ -155,12 +157,15 @@ app.get('/submission/:id', async (req, res) => {
 
       if (contest.type === 'noi' && !contest.ended && !await judge.problem.isAllowedEditBy(res.locals.user)) {
         if (!['Compile Error', 'Waiting', 'Compiling'].includes(judge.status)) {
-          judge.status = 'Compiled';
+          judge.status = 'Submitted';
         }
+
+        hideScore = true;
       }
     }
 
     res.render('submission', {
+      hideScore, hideScore,
       contest: contest,
       judge: judge
     });
@@ -194,7 +199,9 @@ app.get('/submission/:id/ajax', async (req, res) => {
     judge.allowedSeeCase = await judge.isAllowedSeeCaseBy(res.locals.user);
     judge.allowedSeeData = await judge.isAllowedSeeDataBy(res.locals.user);
     judge.allowedRejudge = await judge.problem.isAllowedEditBy(res.locals.user);
+    judge.allowedManage = await judge.problem.isAllowedManageBy(res.locals.user);
 
+    let hideScore = false;
     if (contest) {
       let problems_id = await contest.getProblems();
       judge.problem_id = problems_id.indexOf(judge.problem_id) + 1;
@@ -202,12 +209,15 @@ app.get('/submission/:id/ajax', async (req, res) => {
 
       if (contest.type === 'noi' && !contest.ended && !await judge.problem.isAllowedEditBy(res.locals.user)) {
         if (!['Compile Error', 'Waiting', 'Compiling'].includes(judge.status)) {
-          judge.status = 'Compiled';
+          judge.status = 'Submitted';
         }
+
+        hideScore = true;
       }
     }
 
     res.render('submission_content', {
+      hideScore, hideScore,
       contest: contest,
       judge: judge
     });
