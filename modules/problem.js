@@ -25,6 +25,7 @@ let WaitingJudge = syzoj.model('waiting_judge');
 let Contest = syzoj.model('contest');
 let ProblemTag = syzoj.model('problem_tag');
 let ProblemTagMap = syzoj.model('problem_tag_map');
+let Article = syzoj.model('article');
 
 app.get('/problems', async (req, res) => {
   try {
@@ -204,11 +205,14 @@ app.get('/problem/:id', async (req, res) => {
 
     let testcases = await syzoj.utils.parseTestdata(problem.getTestdataPath(), problem.type === 'submit-answer');
 
+    let discussionCount = await Article.count({ problem_id: id });
+
     res.render('problem', {
       problem: problem,
       state: state,
       lastLanguage: res.locals.user ? await res.locals.user.getLastSubmitLanguage() : null,
-      testcases: testcases
+      testcases: testcases,
+      discussionCount: discussionCount
     });
   } catch (e) {
     syzoj.log(e);
@@ -549,11 +553,11 @@ async function setPublic(req, res, is_public) {
   }
 }
 
-app.get('/problem/:id/public', async (req, res) => {
+app.post('/problem/:id/public', async (req, res) => {
   await setPublic(req, res, true);
 });
 
-app.get('/problem/:id/dis_public', async (req, res) => {
+app.post('/problem/:id/dis_public', async (req, res) => {
   await setPublic(req, res, false);
 });
 
@@ -627,18 +631,38 @@ app.post('/problem/:id/submit', app.multer.fields([{ name: 'answer', maxCount: 1
       await judge_state.save();
     } else {
       if (!await problem.isAllowedUseBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
-      judge_state.type = problem.is_public ? 0 : 2;
+      judge_state.type = 0;
       await judge_state.save();
     }
     await judge_state.updateRelatedInfo(true);
 
     let waiting_judge = await WaitingJudge.create({
-      judge_id: judge_state.id
+      judge_id: judge_state.id,
+      priority: 1
     });
 
     await waiting_judge.save();
 
     res.redirect(syzoj.utils.makeUrl(['submission', judge_state.id]));
+  } catch (e) {
+    syzoj.log(e);
+    res.render('error', {
+      err: e
+    });
+  }
+});
+
+app.post('/problem/:id/delete', async (req, res) => {
+  try {
+    let id = parseInt(req.params.id);
+    let problem = await Problem.fromID(id);
+    if (!problem) throw new ErrorMessage('无此题目。');
+
+    if (!problem.isAllowedManageBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
+
+    await problem.delete();
+
+    res.redirect(syzoj.utils.makeUrl(['problem']));
   } catch (e) {
     syzoj.log(e);
     res.render('error', {
@@ -697,7 +721,7 @@ app.post('/problem/:id/testdata/upload', app.multer.array('file'), async (req, r
   }
 });
 
-app.get('/problem/:id/testdata/delete/:filename', async (req, res) => {
+app.post('/problem/:id/testdata/delete/:filename', async (req, res) => {
   try {
     let id = parseInt(req.params.id);
     let problem = await Problem.fromID(id);
