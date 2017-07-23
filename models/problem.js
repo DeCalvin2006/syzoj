@@ -322,10 +322,12 @@ class Problem extends Model {
     await syzoj.utils.lock(['Problem::Testdata', this.id], async () => {
       let p7zip = new (require('node-7z'));
 
-      let unzipSize = 0;
+      let unzipSize = 0, unzipCount;
       await p7zip.list(path).progress(files => {
+        unzipCount = files.length;
         for (let file of files) unzipSize += file.size;
       });
+      if (!noLimit && unzipCount > syzoj.config.limit.testdata_filecount) throw new ErrorMessage('数据包中的文件太多。');
       if (!noLimit && unzipSize > syzoj.config.limit.testdata) throw new ErrorMessage('数据包太大。');
 
       let dir = this.getTestdataPath();
@@ -344,13 +346,17 @@ class Problem extends Model {
       let fs = Promise.promisifyAll(require('fs-extra')), path = require('path');
       await fs.ensureDirAsync(dir);
 
-      let oldSize = 0;
-      let list = await this.listTestdata();
+      let oldSize = 0, list = await this.listTestdata(), replace = false, oldCount = 0;
       if (list) {
-        for (let file of list.files) if (file.filename !== filename) oldSize += file.size;
+        oldCount = list.files.length;
+        for (let file of list.files) {
+          if (file.filename !== filename) oldSize += file.size;
+          else replace = true;
+        }
       }
 
       if (!noLimit && oldSize + size > syzoj.config.limit.testdata) throw new ErrorMessage('数据包太大。');
+      if (!noLimit && oldCount + !replace > syzoj.config.limit.testdata_filecount) throw new ErrorMessage('数据包中的文件太多。');
 
       await fs.moveAsync(filepath, path.join(dir, filename), { overwrite: true });
       await fs.removeAsync(dir + '.zip');
@@ -374,8 +380,9 @@ class Problem extends Model {
 
       let p7zip = new (require('node-7z'));
 
-      let list = await this.listTestdata(), path = require('path');
-      await p7zip.add(dir + '.zip', list.files.map(file => path.join(dir, file.filename)));
+      let list = await this.listTestdata(), path = require('path'), pathlist = list.files.map(file => path.join(dir, file.filename));
+      if (!pathlist.length) throw new ErrorMessage('无测试数据。');
+      await p7zip.add(dir + '.zip', pathlist);
     });
   }
 
@@ -448,13 +455,15 @@ class Problem extends Model {
     if (this.memory_limit <= 0) return 'Invalid memory limit';
     if (this.memory_limit > syzoj.config.limit.memory_limit) return 'Memory limit too large';
 
-    let filenameRE = /^[\w \-\+\.]*$/;
-    if (this.file_io_input_name && !filenameRE.test(this.file_io_input_name)) return 'Invalid input file name';
-    if (this.file_io_output_name && !filenameRE.test(this.file_io_output_name)) return 'Invalid output file name';
+    if (this.type === 'traditional') {
+      let filenameRE = /^[\w \-\+\.]*$/;
+      if (this.file_io_input_name && !filenameRE.test(this.file_io_input_name)) return 'Invalid input file name';
+      if (this.file_io_output_name && !filenameRE.test(this.file_io_output_name)) return 'Invalid output file name';
 
-    if (this.file_io) {
-      if (!this.file_io_input_name) return 'No input file name';
-      if (!this.file_io_output_name) return 'No output file name';
+      if (this.file_io) {
+        if (!this.file_io_input_name) return 'No input file name';
+        if (!this.file_io_output_name) return 'No output file name';
+      }
     }
 
     return null;
