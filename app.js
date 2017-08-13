@@ -23,6 +23,7 @@ let fs = require('fs'),
     path = require('path');
 
 global.syzoj = {
+  rootDir: __dirname,
   config: require('./config.json'),
   models: [],
   modules: [],
@@ -60,6 +61,8 @@ global.syzoj = {
     let multer = require('multer');
     app.multer = multer({ dest: syzoj.utils.resolvePath(syzoj.config.upload_dir, 'tmp') });
 
+    // This should before load api_v2, to init the `res.locals.user`
+    this.loadHooks();
     // Trick to bypass CSRF for APIv2
     app.use((() => {
       let router = new Express.Router();
@@ -72,7 +75,6 @@ global.syzoj = {
     app.use(csurf({ cookie: true }));
 
     await this.connectDatabase();
-    this.loadHooks();
     this.loadModules();
   },
   async connectDatabase() {

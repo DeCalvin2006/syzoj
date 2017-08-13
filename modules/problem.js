@@ -104,7 +104,7 @@ app.get('/problems/search', async (req, res) => {
       }
     }
 
-    let order = [syzoj.db.literal('`id` = ' + id + ' DESC')];
+    let order = [syzoj.db.literal('`id` = ' + id + ' DESC'), ['id', 'ASC']];
 
     let paginate = syzoj.utils.paginate(await Problem.count(where), req.query.page, syzoj.config.page.problem);
     let problems = await Problem.query(paginate, where, order);
@@ -773,7 +773,18 @@ app.get('/problem/:id/download/additional_file', async (req, res) => {
     let problem = await Problem.fromID(id);
 
     if (!problem) throw new ErrorMessage('无此题目。');
-    if (!await problem.isAllowedUseBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
+
+    // XXX: Reduce duplication (see the '/problem/:id/submit' handler)
+    let contest_id = parseInt(req.query.contest_id);
+    if (contest_id) {
+      let contest = await Contest.fromID(contest_id);
+      if (!contest) throw new ErrorMessage('无此比赛。');
+      if (!await contest.isRunning()) throw new ErrorMessage('比赛未开始或已结束。');
+      let problems_id = await contest.getProblems();
+      if (!problems_id.includes(id)) throw new ErrorMessage('无此题目。');
+    } else {
+      if (!await problem.isAllowedUseBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
+    }
 
     await problem.loadRelationships();
 

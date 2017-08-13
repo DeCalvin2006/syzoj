@@ -113,7 +113,7 @@ module.exports = {
       if (noReplaceUI) return s;
 
       s = s.split('<pre>').join('<div class="ui existing segment"><pre style="margin-top: 0; margin-bottom: 0; ">').split('</pre>').join('</pre></div>')
-           .split('<table>').join('<table class="ui table">')
+           .split('<table>').join('<table class="ui celled table">')
            .split('<blockquote>').join('<div class="ui message">').split('</blockquote>').join('</div>');
 
       let cheerio = require('cheerio');
@@ -173,8 +173,15 @@ module.exports = {
   parseDate(s) {
     return parseInt(+new Date(s) / 1000);
   },
-  getCurrentDate() {
-    return parseInt(+new Date / 1000);
+  getCurrentDate(removeTime) {
+    let d = new Date;
+    if (removeTime) {
+      d.setHours(0);
+      d.setMinutes(0);
+      d.setSeconds(0);
+      d.setMilliseconds(0);
+    }
+    return parseInt(+d / 1000);
   },
   makeUrl(req_params, form) {
     let res = '';
@@ -237,15 +244,14 @@ module.exports = {
 
         res[0].type = 'sum';
         res[0].score = 100;
+        res[0].cases.forEach((e) => { e.key = (e.input.match(/\d+/g) || []).map((x) => parseInt(x)).concat(e.input); });
         res[0].cases.sort((a, b) => {
-          function getLastInteger(s) {
-            let re = /(\d+)\D*$/;
-            let x = re.exec(s);
-            if (x) return parseInt(x[1]);
-            else return -1;
+          for (let i = 0; i < Math.max(a.key.length, b.key.length); ++i) {
+            if (a.key[i] == undefined) return -1;
+            if (b.key[i] == undefined) return +1;
+            if (a.key[i] !== b.key[i]) return (a.key[i] < b.key[i] ? -1 : +1);
           }
-
-          return getLastInteger(a.input) - getLastInteger(b.input);
+          return 0;
         });
 
         res.spj = list.some(s => s.startsWith('spj_'));
@@ -258,16 +264,16 @@ module.exports = {
           score: st.score,
           type: st.type,
           cases: st.cases.map(c => {
-            function getFileName(template, id) {
+            function getFileName(template, id, mustExist) {
               let s = template.split('#').join(String(id));
-              if (!list.includes(s)) throw `找不到文件 ${s}`;
+              if (mustExist && !list.includes(s)) throw `找不到文件 ${s}`;
               return s;
             }
 
             let o = {};
-            if (input) o.input = getFileName(input, c);
-            if (output) o.output = getFileName(output, c);
-            if (answer) o.answer = getFileName(answer, c);
+            if (input) o.input = getFileName(input, c, true);
+            if (output) o.output = getFileName(output, c, true);
+            if (answer) o.answer = getFileName(answer, c, false);
 
             return o;
           })
@@ -348,5 +354,9 @@ module.exports = {
     } catch (e) {
       return false;
     }
+  },
+  async saveConfig() {
+    let fs = require('fs-extra');
+    fs.writeFileAsync(syzoj.rootDir + '/config.json', JSON.stringify(syzoj.config, null, 2));
   }
 };
