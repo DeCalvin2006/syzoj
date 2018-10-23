@@ -26,7 +26,9 @@ let Divine = require('syzoj-divine');
 
 app.get('/', async (req, res) => {
   try {
-    let ranklist = await User.query([1, 10], { is_show: true }, [['ac_num', 'desc']]);
+    let shqACNum = (await User.fromID(543)).ac_num;
+    let cntHigherThanShq = await User.count({ ac_num: { $gte: shqACNum } });
+    let ranklist = await User.query([1, Math.max(cntHigherThanShq, 20)], { is_show: true }, [['ac_num', 'desc']]);
     await ranklist.forEachAsync(async x => x.renderInformation());
 
     let notices = (await Article.query(null, { is_notice: true }, [['public_time', 'desc']])).map(article => ({
@@ -50,7 +52,8 @@ app.get('/', async (req, res) => {
       notices: notices,
       fortune: fortune,
       contests: contests,
-      links: syzoj.config.links
+      links: syzoj.config.links,
+      show_realname: res.locals.user && (await res.locals.user.hasPrivilege('see_realname'))
     });
   } catch (e) {
     syzoj.log(e);

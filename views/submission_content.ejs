@@ -134,7 +134,7 @@ else problemUrl = syzoj.utils.makeUrl(['problem', judge.problem_id]);
     </div>
     <script>
       document.addEventListener('keydown', function (event) {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+        if ((event.ctrlKey || event.metaKey) && (event.key === 'a' || event.keyCode === 65)) {
           var sel = window.getSelection();
           var rg = document.createRange()
           rg.selectNodeContents(document.getElementById('code'));
@@ -251,7 +251,7 @@ document.addEventListener('mousedown', function (event) {
 });
 function update_submission() {
   setTimeout(function () {
-    $.get('/submission/<%= judge.id %>/ajax', function (data) {
+    $.get(ajaxDomainPrefix + '/submission/<%= judge.id %>/ajax', function (data) {
       var e = $('#submission_content'), x = $($.parseHTML(data));
       if (e.find('td.status').text().trim() != x.find('td.status').text().trim()) {
         var a = e.find('div.auto_update');

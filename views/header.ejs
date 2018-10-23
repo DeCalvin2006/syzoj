@@ -1,22 +1,99 @@
 <% include util %>
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head data-csrf-token="<%= req.csrfToken() %>">
+<head data-csrf-token="<%= 'req.csrfToken()' %>">
     <meta charset="utf-8">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
     <title><%= title %> - <%= syzoj.config.title %></title>
-    <link href="/libs/semantic-ui/semantic.min.css" rel="stylesheet">
+<script>
+var ajaxDomainPrefix = '';
+/*
+function findParent(tagname, el) {
+  while (el) {
+    if ((el.nodeName || el.tagName).toLowerCase() === tagname.toLowerCase()) {
+      return el;
+    }
+    el = el.parentNode;
+  }
+  return null;
+}
+
+// var ajaxDomainPrefix = 'https://direct.lyoi.org:52825/lyoi';
+var ajaxDomainPrefix = '';
+
+function redirect(url) {
+    url = url.substr(location.origin.length);
+    NProgress.configure({ trickleSpeed: 50 });
+    NProgress.start();
+    $.get(ajaxDomainPrefix + url, function (data) {
+        NProgress.done(true);
+        history.pushState({ url: url, r: Math.random() }, null, url);
+        document.open();
+        document.write(data);
+        document.close();
+        window.scrollTo(0, 0);
+    });
+}
+
+window.onpopstate = e => {
+    if (e.state) redirect(e.state.url);
+};
+
+document.addEventListener('click', function (e) {
+    var from = findParent('a', e.target || e.srcElement);
+    if (!from || from.getAttribute('href').startsWith('#') || !from.href.startsWith(location.origin) || from.getAttribute('download') === 'true') return;
+    redirect(from.href);
+    e.preventDefault();
+    // window.parent.postMessage({ type: 'navigate', target: from.href }, '*');
+});
+
+history.replaceState({ url: location.href, r: Math.random() }, null, location.href);
+
+// window.parent.postMessage({ type: 'title', title: document.title }, '*');
+*/
+</script>
+
+<style>
+#nprogress .bar { display: none; }
+</style>
+
+    <link href="https://cdnjs.loli.net/ajax/libs/semantic-ui/2.3.3/semantic.min.css" rel="stylesheet">
     <link href="/tomorrow.css" rel="stylesheet">
-    <link href="/mathjax.css?20170713" rel="stylesheet">
-    <link href="/libs/KaTeX/katex.min.css" rel="stylesheet">
-    <link href="/libs/morris.js/morris.css" rel="stylesheet">
-    <link href="/style.css?20170706" rel="stylesheet">
-    <script src="/libs/jquery/jquery.min.js"></script>
+    <link href="/mathjax.css" rel="stylesheet">
+    <link href="https://cdnjs.loli.net/ajax/libs/KaTeX/0.10.0-rc.1/katex.min.css" rel="stylesheet">
+    <link href="https://cdnjs.loli.net/ajax/libs/morris.js/0.5.1/morris.css" rel="stylesheet">
+    <link href="/style.css" rel="stylesheet">
+    <link href="https://fonts.loli.net/css?family=Fira+Mono" rel="stylesheet">
+    <link href="https://fonts.loli.net/css?family=Lato:400,700,400italic,700italic&subset=latin" rel="stylesheet">
+    <link href="https://fonts.loli.net/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i,800,800i&amp;subset=latin-ext" rel="stylesheet">
+    <link href="https://fonts.loli.net/css?family=Raleway:300" rel="stylesheet">
+    <script src="https://cdnjs.loli.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<!--
+    <link href="https://dn-menci.qbox.me/libreoj/libs/semantic-ui/semantic.min.css" rel="stylesheet">
+    <link href="https://dn-menci.qbox.me/libreoj/tomorrow.css" rel="stylesheet">
+    <link href="https://dn-menci.qbox.me/libreoj/mathjax.css" rel="stylesheet">
+    <link href="https://dn-menci.qbox.me/libreoj/libs/KaTeX/katex.min.css" rel="stylesheet">
+    <link href="https://dn-menci.qbox.me/libreoj/libs/morris.js/morris.css" rel="stylesheet">
+    <link href="https://dn-menci.qbox.me/libreoj/style.css" rel="stylesheet">
+    <script src="https://dn-menci.qbox.me/libreoj/libs/jquery/jquery.min.js"></script>
+    <script src="https://unpkg.com/nprogress@0.2.0/nprogress.js"></script>
+    <link href="https://unpkg.com/nprogress@0.2.0/nprogress.css" rel="stylesheet">
+
+<script>
+$(function () {
+    $.ajaxSetup({
+        beforeSend: function (request) {
+            request.setRequestHeader('MenciCookie', document.cookie);
+        }
+    });
+});
+</script>
+-->
 </head>
 <body>
     <div class="ui fixed borderless menu" style="position: fixed; ">
         <div class="ui container">
-            <a class="header item" href="/"><span style="font-family: Raleway; font-size: 1.5em; font-weight: 300; "><%= syzoj.config.title %></span></a>
+            <a class="header item" href="/"><span style="font-family: Raleway; font-size: 1.5em; font-weight: 300; "><!--<%= syzoj.config.title %>-->L<span style="font-size: 12px; font-weight: 600; display: none; ">oge</span>YOI Online Judge</span></a>
             <a class="item<% if (active === '') { %> active<% } %>" href="/"><i class="home icon"></i> 首页</a>
             <a class="item<% if (active.startsWith('problem')) { %> active<% } %>" href="/problems"><i class="list icon"></i> 题库</a>
             <a class="item<% if (active.startsWith('contest')) { %> active<% } %>" href="/contests"><i class="calendar icon"></i> 比赛</a>
@@ -24,6 +101,7 @@
             <a class="item<% if (active.startsWith('ranklist')) { %> active<% } %>" href="/ranklist"><i class="signal icon"></i> 排名</a>
             <a class="item<% if (active.startsWith('discussion') || active.startsWith('article')) { %> active<% } %>" href="/discussion"><i class="comments icon"></i> 讨论</a>
             <a class="item<% if (active.startsWith('help')) { %> active<% } %>" href="/help"><i class="help circle icon"></i> 帮助</a>
+            <a class="item" href="http://172.16.9.233:5283/"><i class="fighter jet icon"></i>校内入口</a>
             <% if (typeof contest !== 'undefined' && contest && contest.id) { %>
               <a id="back_to_contest" class="item" href="<%= syzoj.utils.makeUrl(['contest', contest.id]) %>"><i class="arrow left icon"></i> 返回比赛</a>
             <% } %>
@@ -54,4 +132,4 @@
             </div>
         </div>
     </div>
-    <div class="ui main container" style="margin-left: 0 !important; margin-right: 0 !important; width: 100% !important; margin-top: 5.5em !important; ">
+    <div class="ui main container">

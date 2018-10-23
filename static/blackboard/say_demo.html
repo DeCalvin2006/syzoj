@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Say API Demo</title>
+</head>
+<body>
+<form action="https://api.lyoi.ac/say" id="api" style="text-align: center;">
+    <p>文本:</p>
+    <textarea name="text" id="text" style="width: 80%; height: 10em; font-family: monospace;">fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa</textarea>
+    <p>语音包: </p>
+    <select name="voice" id="voice">
+        <option value="Bruce">Bruce</option>
+        <option value="Fred">Fred</option>
+        <option value="Junior">Junior</option>
+        <option value="Ralph">Ralph</option>
+        <option value="Agnes">Agnes</option>
+        <option value="Kathy">Kathy</option>
+        <option value="Princess">Princess</option>
+        <option value="Victoria">Victoria</option>
+        <option value="Albert">Albert</option>
+        <option value="Bad News">Bad News</option>
+        <option value="Bahh">Bahh</option>
+        <option value="Bells">Bells</option>
+        <option value="Boing">Boing</option>
+        <option value="Bubbles">Bubbles</option>
+        <option value="Cellos" selected="selected">Cellos</option>
+        <option value="Deranged">Deranged</option>
+        <option value="Good News">Good News</option>
+        <option value="Pipe Organ">Pipe Organ</option>
+        <option value="Trinoids">Trinoids</option>
+        <option value="Whisper">Whisper</option>
+        <option value="Zarvox">Zarvox</option>
+    </select>
+    <br>
+    <audio id="au" ></audio>
+    <br>
+    <input type="button" onclick="fetch()" value="试听"></button>
+    <input type="submit" value="提交"/>
+</form>
+<script type="text/javascript">
+    var au = document.getElementById('au');
+    let url = document.getElementById('api').action;
+    var text = document.getElementById('text');
+    var voice = document.getElementById('voice');
+    function fetch() {
+        au.controls = 1;
+        au.src = url + "?" + "text=" + escape(text.value) + "&" + "voice=" + escape(voice.value);
+    }
+</script>
+</body>
+</html>
+
+

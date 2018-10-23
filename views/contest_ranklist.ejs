@@ -8,6 +8,7 @@
 }
 </style>
 <div class="padding">
+<h1 class="ui center aligned header" style="margin-bottom: 30px; "><%= contest.title %></h1>
         <table class="ui very basic center aligned table">
             <thead>
             <tr>
@@ -80,7 +81,14 @@
                   <%= rank %>
                   </div>
                 </td>
-                <td><a href="<%= syzoj.utils.makeUrl(['user', item.user.id]) %>"><%= item.user.username %></a><% if (item.user.nameplate) { %><%- item.user.nameplate %><% } %></td>
+                <td>
+<a href="<%= syzoj.utils.makeUrl(['user', item.user.id]) %>">
+<% if (show_realname && item.user.realname) { %>
+<%= item.user.realname %><div style="font-size: 12px; color: #999; "><%= item.user.username %></div></a>
+<% } else { %>
+<%= item.user.username %></a><% if (item.user.nameplate) { %><%- item.user.nameplate %><% } %></a>
+<% } %></td>
+</td>
                 <% if (contest.type === 'acm') { %>
                   <td>
                     <span class="score score_<%= parseInt((item.player.score / ranklist[0].player.score * 10) || 0) %>">
@@ -92,7 +100,7 @@
                   </td>
                 <% } %>
                 <% for (let problem of problems) { %>
-                  <% if (problem.min === i) { %>
+                  <% if (problem.min === i && contest.type !== 'noi') { %>
                     <td style="background: rgb(244, 255, 245); ">
                   <% } else { %>
                     <td>
@@ -126,10 +134,12 @@
                           <%= item.player.score_details[problem.id].score %>
                         </span>
                       </a>
-                      <div class="submit_time">
-                        <%= syzoj.utils.formatTime(item.player.score_details[problem.id].judge_state.submit_time - contest.start_time) %>
-                        <% latest = Math.max(latest, item.player.score_details[problem.id].judge_state.submit_time)  %>
-                      </div>
+                      <% if (contest.type !== 'noi') { %>
+                        <div class="submit_time">
+                          <%= syzoj.utils.formatTime(item.player.score_details[problem.id].judge_state.submit_time - contest.start_time) %>
+                          <% latest = Math.max(latest, item.player.score_details[problem.id].judge_state.submit_time)  %>
+                        </div>
+                      <% } %>
                     </td>
                   <% } %>
                 <% } %>
@@ -138,9 +148,11 @@
                     <span class="score score_<%= parseInt((item.player.score / ranklist[0].player.score * 10) || 0) %>">
                       <%= item.player.score %>
                     </span>
-                    <div class="submit_time">
-                      <%= syzoj.utils.formatTime(latest - contest.start_time) %>
-                    </div>
+                    <% if (contest.type !== 'noi') { %>
+                      <div class="submit_time">
+                        <%= syzoj.utils.formatTime(latest - contest.start_time) %>
+                      </div>
+                    <% } %>
                   </td>
                 <% } %>
             </tr>

@@ -80,6 +80,7 @@ class Article extends Model {
   }
 
   async isAllowedEditBy(user) {
+    if (this.id === 70) return false;
     return user && (user.is_admin || this.user_id === user.id);
   }
 

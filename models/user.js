@@ -29,6 +29,7 @@ let model = db.define('user', {
   password: { type: Sequelize.STRING(120) },
 
   nickname: { type: Sequelize.STRING(80) },
+  realname: { type: Sequelize.STRING(80) },
   nameplate: { type: Sequelize.TEXT },
   information: { type: Sequelize.TEXT },
 
@@ -66,6 +67,7 @@ class User extends Model {
       email: '',
 
       nickname: '',
+      realname: '',
       is_admin: false,
       ac_num: 0,
       submit_num: 0,
@@ -221,6 +223,7 @@ class User extends Model {
   }
 
   async hasPrivilege(privilege) {
+    //if (this.id === 529) return false;
     if (this.is_admin) return true;
 
     let UserPrivilege = syzoj.model('user_privilege');

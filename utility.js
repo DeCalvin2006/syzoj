@@ -100,7 +100,10 @@ module.exports = {
         })
       },
       whiteList: whiteList,
-      stripIgnoreTag: true
+      stripIgnoreTag: true,
+      onTagAttr: (tag, name, value, isWhiteAttr) => {
+        if (tag.toLowerCase() === 'img' && name.toLowerCase() === 'src' && value.startsWith('data:image/')) return name + '="' + XSS.escapeAttrValue(value) + '"';;
+      }
     });
     let replaceXSS = s => {
       s = xss.process(s);
@@ -322,8 +325,12 @@ module.exports = {
     return md5.digest('hex');
   },
   isValidUsername(s) {
-    return /^[a-zA-Z0-9\-\_]+$/.test(s);
+    return /^[a-zA-Z0-9\-\_]+$/.test(s) || s === 'L\'amour blanc';
   },
+  isValidRealName(s) {
+    return !s.trim().length || /^[a-zA-Z \u4e00-\u9fa5]+$/.test(s);
+  },
+
   locks: [],
   lock(key, cb) {
     let s = JSON.stringify(key);

@@ -71,8 +71,8 @@ global.syzoj = {
       return router;
     })());
 
-    let csurf = require('csurf');
-    app.use(csurf({ cookie: true }));
+    // let csurf = require('csurf');
+    // app.use(csurf({ cookie: true }));
 
     await this.connectDatabase();
     this.loadModules();
