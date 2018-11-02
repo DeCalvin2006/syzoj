@@ -136,29 +136,28 @@ cyr，你爸爸又给我打电话了！
 这个于西印是谁交的？！
 `.trim().split('\n');
           %>
-          function tangokotoLoad() {
-            document.write("Loading...");
-            if (Math.random() * 10 < 3.5) {
-              var tangokoto = <%- JSON.stringify(tangokoto) %>;
-              document.getElementById('hitokoto-content').innerHTML = (tangokoto[Math.floor(Math.random() * tangokoto.length)]);
-              console.log("Loaded Tangokoto-simplified by local.")
-            }
-            else {
-              var successfullyLoaded = $.get('https://api.imvictor.tech/php-api/v7/tangokoto', function (data) {
-                $('#hitokoto-loader').removeClass('active');
-                $('#hitokoto-content').css('display', '').text(data.hitokoto);
-                if (data.from) {
-                  $('#hitokoto-from').css('display', '').text('——' + data.from);
+            function tangokotoLoad() {
+                document.write("Loading...");
+                var tangokoto = <%- JSON.stringify(tangokoto) %>;
+                if (Math.random() * 10 < 3.5) {
+                    document.getElementById('hitokoto-content').innerHTML = (tangokoto[Math.floor(Math.random() * tangokoto.length)]);
+                    console.log("Loaded Tangokoto-simplified by local.");
                 }
-                console.log("Loaded Tangokoto from Tangokoto Public API.");
-              }).readyState;
-              if (successfullyLoaded != 0) {
-                  var tangokoto = <%- JSON.stringify(tangokoto) %>;
-                  document.getElementById('hitokoto-content').innerHTML = (tangokoto[Math.floor(Math.random() * tangokoto.length)]);
-                  console.log("Tangokoto Public API was down, using local database.");
-              }
+                else {
+                    var jqxhr = $.getJSON('https://api.imvictor.tech/php-api/v7/tangokoto')
+                        .done(function (data) {
+                            $('#hitokoto-loader').removeClass('active');
+                            $('#hitokoto-content').css('display', '').text(data.hitokoto);
+                            if (data.from) {
+                                $('#hitokoto-from').css('display', '').text('——' + data.from);
+                            }
+                            console.log("Loaded Tangokoto from Tangokoto Public API.");
+                        }).fail(function (xhr, status) {
+                            document.getElementById('hitokoto-content').innerHTML = (tangokoto[Math.floor(Math.random() * tangokoto.length)]);
+                            console.log("Tangokoto Public API was down, using local database.");
+                        })
+                }
             }
-          }
           </script>
           <div style="font-size: 1em; line-height: 1.5em; display: block; " id="hitokoto-content"><script>
 tangokotoLoad();
