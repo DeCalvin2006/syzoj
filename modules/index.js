@@ -10,7 +10,9 @@ const timeAgo = new TimeAgo('zh-CN');
 
 app.get('/', async (req, res) => {
   try {
-    let ranklist = await User.query([1, syzoj.config.page.ranklist_index], { is_show: true }, [[syzoj.config.sorting.ranklist.field, syzoj.config.sorting.ranklist.order]]);
+    let shqACNum = (await User.fromID(543)).ac_num;
+    let cntHigherThanShq = await User.count({ ac_num: { $gte: shqACNum } });
+    let ranklist = await User.query([1, Math.max(cntHigherThanShq, 20)], { is_show: true }, [['ac_num', 'desc']]);
     await ranklist.forEachAsync(async x => x.renderInformation());
 
     let notices = (await Article.query(null, { is_notice: true }, [['public_time', 'desc']])).map(article => ({
