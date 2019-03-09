@@ -85,21 +85,67 @@
       </div>
     </div>
     <div class="right floated five wide column">
-        <h4 class="ui top attached block header"><i class="ui quote left icon"></i>一言（ヒトコト）</h4>
+        <h4 class="ui top attached block header"><i class="ui quote left icon"></i>唐言（タンゴコト）</h4>
         <div class="ui bottom attached center aligned segment">
-          <div class="ui active centered inline loader" id="hitokoto-loader"></div>
+          <div class="ui active centered inline loader" style="display: none; " id="hitokoto-loader"></div>
           <script>
-          $.get('https://sslapi.hitokoto.cn/?c=a', function (data) {
-            if (typeof data === 'string') data = JSON.parse(data);
-            $('#hitokoto-loader').removeClass('active');
-            $('#hitokoto-content').css('display', '').text(data.hitokoto);
-            if (data.from) {
-              $('#hitokoto-from').css('display', '').text('——' + data.from);
+          <%
+          let tangokoto = [
+            "你干什么滴？",
+            "cyr，你爸爸又给我打电话了！",
+            "这个英雄联盟 …… 是个什么玩意啊？",
+            "抓紧了！",
+            "小点声！",
+            "我从监控里看见你了！",
+            "取消你复赛资格！",
+            "你把你刚才的那个页面给我调出来！",
+            "我已经在后门看了你十分钟了！",
+            "晚上不睡早晨不起，上课在那里打盹！",
+            "调题的时候把 QQ 给我关上！",
+            "调几个题了？",
+            "恁就是不自觉！",
+            "没治了。",
+            "还想学不想学啊？！",
+            "不是不让你们玩游戏 ……",
+            "做题的时候不要讨论，像正式考试一样！",
+            "你这个笑声很有个性啊！",
+            "这还真是大白天见了鬼了！",
+            "这样的错误要是考试呢！？",
+            "要是下个大雨，就来好喽~~",
+            "这个 shq 怎么老是爆零呢？",
+            "这个于西印是谁交的？！"
+          ];
+          %>
+          function tangokotoLoad() {
+            // document.write("Loading...");
+            var tangokoto = <%- JSON.stringify(tangokoto) %>;
+            if (Math.random() * 10 < 3.5) {
+              document.getElementById('hitokoto-content').innerHTML = (tangokoto[Math.floor(Math.random() * tangokoto.length)]);
+              console.log("Loaded Tangokoto-simplified by local.");
             }
-          });
+            else {
+	      $('#hitokoto-loader').show();
+              var jqxhr = $.getJSON('https://api.imvictor.tech/php-api/v7/tangokoto')
+                  .done(function (data) {
+                    $('#hitokoto-loader').hide();
+                    $('#hitokoto-content').text(data.hitokoto);
+                    if (data.from) {
+                      $('#hitokoto-from').text('——' + data.from);
+                    }
+                    console.log("Loaded Tangokoto from Tangokoto Public API.");
+                  }).fail(function (xhr, status) {
+                    document.getElementById('hitokoto-content').innerHTML = (tangokoto[Math.floor(Math.random() * tangokoto.length)]);
+                    console.log("Tangokoto Public API was down, using local database.");
+                  });
+            }
+          }
           </script>
-          <div style="font-size: 1em; line-height: 1.5em; display: none; " id="hitokoto-content"></div>
-          <div style="text-align: right; margin-top: 15px; font-size: 0.9em; color: #666; display: none; " id="hitokoto-from"></div>
+          <div style="font-size: 1em; line-height: 1.5em; " id="hitokoto-content">
+            <script>
+              tangokotoLoad();
+            </script>
+          </div>
+          <div style="text-align: right; margin-top: 15px; font-size: 0.9em; color: #666; " id="hitokoto-from">——唐老师</div>
         </div>
       <h4 class="ui top attached block header"><i class="ui rss icon"></i>最近更新</h4>
       <div class="ui bottom attached segment">
