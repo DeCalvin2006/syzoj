@@ -13,7 +13,7 @@ app.get('/', async (req, res) => {
     let shqACNum = (await User.findById(543)).ac_num;
     let cntHigherThanShq = await User.count({ ac_num: TypeORM.MoreThanOrEqual(shqACNum) });
     let ranklist = await User.queryRange([1, Math.max(cntHigherThanShq, syzoj.config.page.ranklist_index)], { is_show: true }, {
-      [syzoj.config.sorting.ranklist.field]: syzoj.config.sorting.ranklist.order
+      ac_num: syzoj.config.sorting.ranklist.order
     });
     await ranklist.forEachAsync(async x => x.renderInformation());
 
