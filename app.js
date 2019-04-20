@@ -29,6 +29,16 @@ global.syzoj = {
     if (obj instanceof ErrorMessage) return;
     console.log(obj);
   },
+  checkMigratedToTypeORM() {
+    const userConfig = require(options.config);
+    if (!userConfig.db.migrated_to_typeorm) {
+      app.use((req, res) => res.send('Please refer to <a href="https://github.com/syzoj/syzoj/wiki/TypeORM-%E8%BF%81%E7%A7%BB%E6%8C%87%E5%8D%97">TypeORM Migration Guide</a>.'));
+      app.listen(parseInt(syzoj.config.port), syzoj.config.hostname);
+      return false;
+    }
+
+    return true;
+  },
   async run() {
     // Check config
     if (syzoj.config.session_secret === '@SESSION_SECRET@'
@@ -42,9 +52,13 @@ global.syzoj = {
     let Express = require('express');
     global.app = Express();
 
+    if (!this.checkMigratedToTypeORM()) return;
+
     syzoj.production = app.get('env') === 'production';
     let winstonLib = require('./libs/winston');
     winstonLib.configureWinston(!syzoj.production);
+
+    this.utils = require('./utility');
 
     // Set assets dir
     app.use(Express.static(__dirname + '/static', { maxAge: syzoj.production ? '1y' : 0 }));
@@ -153,7 +167,10 @@ global.syzoj = {
       database: this.config.db.database,
       entities: models,
       synchronize: true,
-      logging: true
+      logging: false,
+      extra: {
+        connectionLimit: 50
+      }
     });
   },
   loadModules() {
@@ -248,8 +265,7 @@ global.syzoj = {
       res.locals.res = res;
       next();
     });
-  },
-  utils: require('./utility')
+  }
 };
 
 syzoj.run();
