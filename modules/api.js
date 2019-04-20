@@ -42,7 +42,8 @@ app.post('/api/forget', async (req, res) => {
       expiresIn: '12h'
     });
 
-    const vurl = req.protocol + '://' + req.get('host') + syzoj.utils.makeUrl(['api', 'forget_confirm'], { token: token });
+    const currentProto = req.get("X-Forwarded-Proto") || req.protocol;
+    const vurl = currentProto + '://' + req.get('host') + syzoj.utils.makeUrl(['api', 'forget_confirm'], { token: token });
     try {
       await Email.send(user.email,
         `${user.username} 的 ${syzoj.config.title} 密码重置邮件`,
@@ -92,7 +93,8 @@ app.post('/api/sign_up', async (req, res) => {
         expiresIn: '2d'
       });
 
-      const vurl = req.protocol + '://' + req.get('host') + syzoj.utils.makeUrl(['api', 'sign_up_confirm'], { token: token });
+      const currentProto = req.get("X-Forwarded-Proto") || req.protocol;
+      const vurl = currentProto + '://' + req.get('host') + syzoj.utils.makeUrl(['api', 'sign_up_confirm'], { token: token });
       try {
         await Email.send(req.body.email,
           `${req.body.username} 的 ${syzoj.config.title} 注册验证邮件`,
@@ -111,7 +113,9 @@ app.post('/api/sign_up', async (req, res) => {
         username: req.body.username,
         password: req.body.password,
         email: req.body.email,
-        public_email: true
+        is_show: syzoj.config.default.user.show,
+        rating: syzoj.config.default.user.rating,
+        register_time: parseInt((new Date()).getTime() / 1000)
       });
       await user.save();
 
@@ -156,7 +160,7 @@ app.post('/api/reset_password', async (req, res) => {
 
     let syzoj2_xxx_md5 = '59cb65ba6f9ad18de0dcd12d5ae11bd2';
     if (req.body.password === syzoj2_xxx_md5) throw new ErrorMessage('密码不能为空。');
-    const user = await User.fromID(obj.userId);
+    const user = await User.findById(obj.userId);
     user.password = req.body.password;
     await user.save();
 
@@ -196,7 +200,9 @@ app.get('/api/sign_up_confirm', async (req, res) => {
       username: obj.username,
       password: obj.password,
       email: obj.email,
-      public_email: true
+      is_show: syzoj.config.default.user.show,
+      rating: syzoj.config.default.user.rating,
+      register_time: parseInt((new Date()).getTime() / 1000)
     });
     await user.save();
 
