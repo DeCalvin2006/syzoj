@@ -2,10 +2,22 @@ import * as TypeORM from "typeorm";
 import * as LRUCache from "lru-cache";
 import * as DeepCopy from "deepcopy";
 
+declare var syzoj: any;
+
 interface Paginater {
   pageCnt: number;
   perPage: number;
   currPage: number;
+}
+
+enum PaginationType {
+  PREV = -1,
+  NEXT = 1
+}
+
+enum PaginationIDOrder {
+  ASC = 1,
+  DESC = -1
 }
 
 const caches: Map<string, LRUCache<number, Model>> = new Map();
@@ -13,7 +25,7 @@ const caches: Map<string, LRUCache<number, Model>> = new Map();
 function ensureCache(modelName) {
   if (!caches.has(modelName)) {
     caches.set(modelName, new LRUCache({
-      max: 500
+      max: syzoj.config.db.cache_size
     }));
   }
 
@@ -39,27 +51,27 @@ export default class Model extends TypeORM.BaseEntity {
     const doQuery = async () => await (this as any).findOne(parseInt(id as any) || 0);
 
     if ((this as typeof Model).cache) {
-      let result;
-      if (result = cacheGet(this.name, id)) {
-        return result.clone();
+      const resultObject = cacheGet(this.name, id);
+      if (resultObject) {
+        return (this as typeof Model).create(resultObject) as any as T;
       }
 
-      result = await doQuery();
+      const result = await doQuery();
       if (result) {
-        cacheSet(this.name, id, result);
+        cacheSet(this.name, id, result.toPlain());
       }
-      return result && result.clone();
+      return result;
     } else {
       return await doQuery();
     }
   }
 
-  clone() {
+  toPlain() {
     const object = {};
     TypeORM.getConnection().getMetadata(this.constructor).ownColumns.map(column => column.propertyName).forEach(key => {
       object[key] = DeepCopy(this[key]);
     });
-    return (this.constructor as any).create(object);
+    return object;
   }
 
   async destroy() {
@@ -120,7 +132,11 @@ export default class Model extends TypeORM.BaseEntity {
     return queryBuilder.getMany();
   }
 
-  static async queryPageWithLargeData(queryBuilder, { currPageTop, currPageBottom, perPage }, type) {
+  static async queryPageWithLargeData<T extends TypeORM.BaseEntity>(this: TypeORM.ObjectType<T>,
+                                                                    queryBuilder: TypeORM.SelectQueryBuilder<T>,
+                                                                    { currPageTop, currPageBottom, perPage },
+                                                                    idOrder: PaginationIDOrder,
+                                                                    pageType: PaginationType) {
     const queryBuilderBak = queryBuilder.clone();
 
     const result = {
@@ -134,13 +150,20 @@ export default class Model extends TypeORM.BaseEntity {
     };
 
     queryBuilder.take(perPage);
-    if (type === -1) {
-      if (currPageTop != null) queryBuilder.andWhere('id > :currPageTop', { currPageTop });
-    } else if (type === 1) {
-      if (currPageBottom != null) queryBuilder.andWhere('id < :currPageBottom', { currPageBottom });
-    }
+    if (pageType === PaginationType.PREV) {
+      if (currPageTop != null) {
+        queryBuilder.andWhere(`id ${idOrder === PaginationIDOrder.DESC ? '>' : '<'} :currPageTop`, { currPageTop });
+        queryBuilder.orderBy('id', idOrder === PaginationIDOrder.DESC ? 'ASC' : 'DESC');
+      }
+    } else if (pageType === PaginationType.NEXT) {
+      if (currPageBottom != null) {
+        queryBuilder.andWhere(`id ${idOrder === PaginationIDOrder.DESC ? '<' : '>'} :currPageBottom`, { currPageBottom });
+        queryBuilder.orderBy('id', idOrder === PaginationIDOrder.DESC ? 'DESC' : 'ASC');
+      }
+    } else queryBuilder.orderBy('id', idOrder === PaginationIDOrder.DESC ? 'DESC' : 'ASC');
 
     result.data = await queryBuilder.getMany();
+    result.data.sort((a, b) => (a.id - b.id) * idOrder);
 
     if (result.data.length === 0) return result;
 
@@ -150,10 +173,10 @@ export default class Model extends TypeORM.BaseEntity {
     result.meta.top = result.data[0].id;
     result.meta.bottom = result.data[result.data.length - 1].id;
 
-    result.meta.hasPrevPage = !!(await queryBuilderHasPrev.andWhere('id > :id', {
+    result.meta.hasPrevPage = !!(await queryBuilderHasPrev.andWhere(`id ${idOrder === PaginationIDOrder.DESC ? '>' : '<'} :id`, {
                                                             id: result.meta.top
                                                           }).take(1).getOne());
-    result.meta.hasNextPage = !!(await queryBuilderHasNext.andWhere('id < :id', {
+    result.meta.hasNextPage = !!(await queryBuilderHasNext.andWhere(`id ${idOrder === PaginationIDOrder.DESC ? '<' : '>'} :id`, {
                                                             id: result.meta.bottom
                                                           }).take(1).getOne());
 
