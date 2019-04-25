@@ -12,7 +12,7 @@ app.get('/discussion/:type?', async (req, res) => {
 
     let where;
     if (in_problems) {
-      where = { problem_id: TypeORM.Not(null) };
+      where = { problem_id: TypeORM.Not(TypeORM.IsNull()) };
     } else {
       where = { problem_id: null };
     }
@@ -201,6 +201,10 @@ app.post('/article/:id/delete', async (req, res) => {
       if (!await article.isAllowedEditBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
     }
 
+    await Promise.all((await ArticleComment.find({
+      article_id: article.id
+    })).map(comment => comment.destroy()))
+
     await article.destroy();
 
     res.redirect(syzoj.utils.makeUrl(['discussion', 'global']));
@@ -234,9 +238,7 @@ app.post('/article/:id/comment', async (req, res) => {
 
     await comment.save();
 
-    article.sort_time = syzoj.utils.getCurrentDate();
-    article.comments_num += 1;
-    await article.save();
+    await article.resetReplyCountAndTime();
 
     res.redirect(syzoj.utils.makeUrl(['article', article.id]));
   } catch (e) {
@@ -260,12 +262,11 @@ app.post('/article/:article_id/comment/:id/delete', async (req, res) => {
       if (!await comment.isAllowedEditBy(res.locals.user)) throw new ErrorMessage('您没有权限进行此操作。');
     }
 
+    const article = await Article.findById(comment.article_id);
+
     await comment.destroy();
 
-    let article = comment.article;
-    article.comments_num -= 1;
-
-    await article.save();
+    await article.resetReplyCountAndTime();
 
     res.redirect(syzoj.utils.makeUrl(['article', comment.article_id]));
   } catch (e) {
