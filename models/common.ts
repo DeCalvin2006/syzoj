@@ -77,8 +77,12 @@ export default class Model extends TypeORM.BaseEntity {
   async destroy() {
     const id = (this as any).id;
     await TypeORM.getManager().remove(this);
-    if ((this.constructor as typeof Model).cache) {
-      cacheSet(this.constructor.name, id, null);
+    await (this.constructor as typeof Model).deleteFromCache(id);
+  }
+
+  static async deleteFromCache(id) {
+    if (this.cache) {
+      cacheSet(this.name, id, null);
     }
   }
 
@@ -132,11 +136,11 @@ export default class Model extends TypeORM.BaseEntity {
     return queryBuilder.getMany();
   }
 
-  static async queryPageWithLargeData<T extends TypeORM.BaseEntity>(this: TypeORM.ObjectType<T>,
-                                                                    queryBuilder: TypeORM.SelectQueryBuilder<T>,
-                                                                    { currPageTop, currPageBottom, perPage },
-                                                                    idOrder: PaginationIDOrder,
-                                                                    pageType: PaginationType) {
+  static async queryPageFast<T extends TypeORM.BaseEntity>(this: TypeORM.ObjectType<T>,
+                                                           queryBuilder: TypeORM.SelectQueryBuilder<T>,
+                                                           { currPageTop, currPageBottom, perPage },
+                                                           idOrder: PaginationIDOrder,
+                                                           pageType: PaginationType) {
     const queryBuilderBak = queryBuilder.clone();
 
     const result = {
