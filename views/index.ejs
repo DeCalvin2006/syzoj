@@ -125,7 +125,7 @@
             }
             else {
 	      $('#hitokoto-loader').show();
-              var jqxhr = $.getJSON('https://api.lyoi.cc/php-api/tangokoto')
+              var jqxhr = $.getJSON('https://api.lyoi.cc/tangokoto')
                   .done(function (data) {
                     $('#hitokoto-loader').hide();
                     $('#hitokoto-content').text(data.hitokoto);
