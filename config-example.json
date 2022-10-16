@@ -125,5 +125,6 @@
   },
   "no_cdn": false,
   "username_regex": "^[a-zA-Z0-9\\-\\_]+$",
-  "submissions_page_fast_pagination": false
+  "submissions_page_fast_pagination": false,
+  "site_for_download": ""
 }
