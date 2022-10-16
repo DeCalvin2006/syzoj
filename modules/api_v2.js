@@ -121,7 +121,7 @@ app.apiRouter.get('/api/v2/download/:token', async (req, res) => {
   try {
     const token = req.params.token, data = jwt.decode(token);
     if (!data) throw new ErrorMessage("无效的令牌。");
-    if (url.parse(syzoj.utils.getCurrentLocation()).href !== url.parse(syzoj.config.site_for_download).href) {
+    if (url.parse(syzoj.utils.getCurrentLocation(req, true)).href !== url.parse(syzoj.config.site_for_download).href) {
       throw new ErrorMessage("无效的下载地址。");
     }
 

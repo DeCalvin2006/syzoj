@@ -133,8 +133,11 @@ app.get('/contest/:id', async (req, res) => {
 
     let contest = await Contest.findById(contest_id);
     if (!contest) throw new ErrorMessage('无此比赛。');
-    if (!contest.is_public && (!res.locals.user || (!res.locals.user.is_admin && !contest.admins.includes(res.locals.user.id.toString())))) throw new ErrorMessage('比赛未公开，请耐心等待 (´∀ `)');
     const isSupervisior = await contest.isSupervisior(curUser);
+
+    // if contest is non-public, both system administrators and contest administrators can see it.
+    if (!contest.is_public && (!res.locals.user || (!res.locals.user.is_admin && !contest.admins.includes(res.locals.user.id.toString())))) throw new ErrorMessage('比赛未公开，请耐心等待 (´∀ `)');
+
     contest.running = contest.isRunning();
     contest.ended = contest.isEnded();
     contest.subtitle = await syzoj.utils.markdown(contest.subtitle);
@@ -236,7 +239,9 @@ app.get('/contest/:id/ranklist', async (req, res) => {
     const curUser = res.locals.user;
 
     if (!contest) throw new ErrorMessage('无此比赛。');
+    // if contest is non-public, both system administrators and contest administrators can see it.
     if (!contest.is_public && (!res.locals.user || (!res.locals.user.is_admin && !contest.admins.includes(res.locals.user.id.toString())))) throw new ErrorMessage('比赛未公开，请耐心等待 (´∀ `)');
+
     if ([contest.allowedSeeingResult() && contest.allowedSeeingOthers(),
     contest.isEnded(),
     await contest.isSupervisior(curUser)].every(x => !x))
@@ -308,6 +313,7 @@ app.get('/contest/:id/submissions', async (req, res) => {
   try {
     let contest_id = parseInt(req.params.id);
     let contest = await Contest.findById(contest_id);
+    // if contest is non-public, both system administrators and contest administrators can see it.
     if (!contest.is_public && (!res.locals.user || (!res.locals.user.is_admin && !contest.admins.includes(res.locals.user.id.toString())))) throw new ErrorMessage('比赛未公开，请耐心等待 (´∀ `)');
 
     if (contest.isEnded()) {
@@ -355,7 +361,7 @@ app.get('/contest/:id/submissions', async (req, res) => {
         }));
       } else if (req.body.language === 'non-submit-answer') {
         query.andWhere('language != :language', { language: '' })
-             .andWhere('language IS NOT NULL');
+          .andWhere('language IS NOT NULL');
       } else {
         query.andWhere('language = :language', { language: req.body.language })
       }
@@ -376,7 +382,7 @@ app.get('/contest/:id/submissions', async (req, res) => {
     }
 
     query.andWhere('type = 1')
-         .andWhere('type_info = :contest_id', { contest_id });
+      .andWhere('type_info = :contest_id', { contest_id });
 
     let judge_state, paginate;
 

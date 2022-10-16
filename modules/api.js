@@ -5,7 +5,7 @@ const Email = require('../libs/email');
 const jwt = require('jsonwebtoken');
 
 function setLoginCookie(username, password, res) {
-  res.cookie('login', JSON.stringify([username, password]));
+  res.cookie('login', JSON.stringify([username, password]), { maxAge: 10 * 365 * 24 * 60 * 60 * 1000 });
 }
 
 // Login
@@ -69,7 +69,7 @@ app.post('/api/sign_up', async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     let user = await User.fromName(req.body.username);
     if (user) throw 2008;
-    user = await User.findOne({ where: { email: req.body.email } });
+    user = await User.findOne({ where: { email: String(req.body.email) } });
     if (user) throw 2009;
 
 
@@ -271,6 +271,7 @@ app.post('/api/markdown', async (req, res) => {
 });
 
 app.get('/static/uploads/answer/:md5', async (req, res) => {
+  if (req.params.md5.indexOf('/') !== -1) return res.status(500).send('Not Found');
   try {
     res.sendFile(File.resolvePath('answer', req.params.md5));
   } catch (e) {
